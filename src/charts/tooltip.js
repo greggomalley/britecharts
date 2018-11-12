@@ -1,20 +1,20 @@
-define(function(require){
-    'use strict';
+define(function(require) {
+    "use strict";
 
-    const d3Ease = require('d3-ease');
-    const d3Format = require('d3-format');
-    const d3Selection = require('d3-selection');
-    const d3Transition = require('d3-transition');
-    const d3TimeFormat = require('d3-time-format');
+    const d3Ease = require("d3-ease");
+    const d3Format = require("d3-format");
+    const d3Selection = require("d3-selection");
+    const d3Transition = require("d3-transition");
+    const d3TimeFormat = require("d3-time-format");
 
-    const {axisTimeCombinations} = require('./helpers/constants');
+    const { axisTimeCombinations } = require("./helpers/constants");
     const {
         formatIntegerValue,
         formatDecimalValue,
         isInteger
-    } = require('./helpers/number');
+    } = require("./helpers/number");
 
-    const {getTextWidth} = require('./helpers/text');
+    const { getTextWidth } = require("./helpers/text");
 
     /**
      * Tooltip Component reusable API class that renders a
@@ -54,26 +54,15 @@ define(function(require){
      *
      */
     return function module() {
-
-        let margin = {
-                top: 2,
-                right: 2,
-                bottom: 2,
-                left: 2
-            },
+        let margin = { top: 2, right: 2, bottom: 2, left: 2 },
             width = 250,
             height = 45,
-
-            title = 'Tooltip title',
+            title = "Tooltip title",
             shouldShowDateInTitle = true,
             valueFormat = null,
-
             // tooltip
             tooltip,
-            tooltipOffset = {
-                y: -55,
-                x: 0
-            },
+            tooltipOffset = { y: -55, x: 0 },
             tooltipMaxTopicLength = 170,
             tooltipTextContainer,
             tooltipDivider,
@@ -92,37 +81,33 @@ define(function(require){
             // Animations
             mouseChaseDuration = 100,
             ease = d3Ease.easeQuadInOut,
-
             circleYOffset = 8,
-
             colorMap,
-            bodyFillColor = '#FFFFFF',
-            borderStrokeColor = '#D2D6DF',
-            titleFillColor = '#6D717A',
-            textFillColor = '#282C35',
-            tooltipTextColor = '#000000',
-
-            dateLabel = 'date',
-            valueLabel = 'value',
-            nameLabel = 'name',
-            topicLabel = 'topics',
-
+            bodyFillColor = "#FFFFFF",
+            borderStrokeColor = "#D2D6DF",
+            titleFillColor = "#6D717A",
+            textFillColor = "#282C35",
+            tooltipTextColor = "#000000",
+            dateLabel = "date",
+            valueLabel = "value",
+            nameLabel = "name",
+            topicLabel = "topics",
             defaultAxisSettings = axisTimeCombinations.DAY_MONTH,
             dateFormat = null,
             dateCustomFormat = null,
             topicsOrder = [],
-
             // formats
             numberFormat = null,
             valueFormatter = null,
-            monthDayYearFormat = d3TimeFormat.timeFormat('%b %d, %Y'),
-            monthDayHourFormat = d3TimeFormat.timeFormat('%b %d, %I %p'),
+            monthDayYearFormat = d3TimeFormat.timeFormat("%b %d, %Y"),
+            monthDayHourFormat = d3TimeFormat.timeFormat("%b %d, %I %p"),
             locale,
-
-            chartWidth, chartHeight,
+            tooltipFooter = null,
+            tooltipFooterContainer,
+            chartWidth,
+            chartHeight,
             data,
             svg;
-
 
         /**
          * This function creates the graph using the selection as container
@@ -131,7 +116,7 @@ define(function(require){
          * @param {Object} _data The data to attach and generate the chart
          */
         function exports(_selection) {
-            _selection.each(function(_data){
+            _selection.each(function(_data) {
                 chartWidth = width - margin.left - margin.right;
                 chartHeight = height - margin.top - margin.bottom;
                 data = _data;
@@ -146,11 +131,12 @@ define(function(require){
          * @private
          */
         function buildContainerGroups() {
-            var container = svg.append('g')
-                .classed('tooltip-container-group select-disable', true)
-                .attr('transform', `translate( ${margin.left}, ${margin.top})`);
+            var container = svg
+                .append("g")
+                .classed("tooltip-container-group select-disable", true)
+                .attr("transform", `translate( ${margin.left}, ${margin.top})`);
 
-            container.append('g').classed('tooltip-group', true);
+            container.append("g").classed("tooltip-group", true);
         }
 
         /**
@@ -160,18 +146,18 @@ define(function(require){
          */
         function buildSVG(container) {
             if (!svg) {
-                svg = d3Selection.select(container)
-                  .append('g')
-                    .classed('britechart britechart-tooltip', true)
-                    .style('visibility', 'hidden');
+                svg = d3Selection
+                    .select(container)
+                    .append("g")
+                    .classed("britechart britechart-tooltip", true)
+                    .style("visibility", "hidden");
 
                 buildContainerGroups();
                 drawTooltip();
             }
-            svg
-                .transition()
-                .attr('width', width)
-                .attr('height', height);
+            svg.transition()
+                .attr("width", width)
+                .attr("height", height);
 
             // Hidden by default
             exports.hide();
@@ -182,9 +168,10 @@ define(function(require){
          * @return void
          * @private
          */
-        function cleanContent(){
-            tooltipBody.selectAll('text').remove();
-            tooltipBody.selectAll('circle').remove();
+        function cleanContent() {
+            tooltipBody.selectAll("text").remove();
+            tooltipBody.selectAll("circle").remove();
+            tooltipBody.selectAll(".tooltip-footer").remove();
         }
 
         /**
@@ -192,46 +179,47 @@ define(function(require){
          * @return void
          * @private
          */
-        function drawTooltip(){
-            tooltipTextContainer = svg.selectAll('.tooltip-group')
-              .append('g')
-                .classed('tooltip-text', true);
+        function drawTooltip() {
+            tooltipTextContainer = svg
+                .selectAll(".tooltip-group")
+                .append("g")
+                .classed("tooltip-text", true);
 
             tooltip = tooltipTextContainer
-              .append('rect')
-                .classed('tooltip-text-container', true)
-                .attr('x', -tooltipWidth / 4 + 8)
-                .attr('y', 0)
-                .attr('width', tooltipWidth)
-                .attr('height', tooltipHeight)
-                .attr('rx', tooltipBorderRadius)
-                .attr('ry', tooltipBorderRadius)
-                .style('fill', bodyFillColor)
-                .style('stroke', borderStrokeColor)
-                .style('stroke-width', 1);
+                .append("rect")
+                .classed("tooltip-text-container", true)
+                .attr("x", -tooltipWidth / 4 + 8)
+                .attr("y", 0)
+                .attr("width", tooltipWidth)
+                .attr("height", tooltipHeight)
+                .attr("rx", tooltipBorderRadius)
+                .attr("ry", tooltipBorderRadius)
+                .style("fill", bodyFillColor)
+                .style("stroke", borderStrokeColor)
+                .style("stroke-width", 1);
 
             tooltipTitle = tooltipTextContainer
-              .append('text')
-                .classed('tooltip-title', true)
-                .attr('x', -tooltipWidth / 4 + 16)
-                .attr('dy', '.35em')
-                .attr('y', 16)
-                .style('fill', titleFillColor);
+                .append("text")
+                .classed("tooltip-title", true)
+                .attr("x", -tooltipWidth / 4 + 16)
+                .attr("dy", ".35em")
+                .attr("y", 16)
+                .style("fill", titleFillColor);
 
             tooltipDivider = tooltipTextContainer
-              .append('line')
-                .classed('tooltip-divider', true)
-                .attr('x1', -tooltipWidth / 4 + 16)
-                .attr('x2', 265)
-                .attr('y1', 31)
-                .attr('y2', 31)
-                .style('stroke', borderStrokeColor);
+                .append("line")
+                .classed("tooltip-divider", true)
+                .attr("x1", -tooltipWidth / 4 + 16)
+                .attr("x2", 265)
+                .attr("y1", 31)
+                .attr("y2", 31)
+                .style("stroke", borderStrokeColor);
 
             tooltipBody = tooltipTextContainer
-              .append('g')
-                .classed('tooltip-body', true)
-                .style('transform', 'translateY(8px)')
-                .style('fill', textFillColor);
+                .append("g")
+                .classed("tooltip-body", true)
+                .style("transform", "translateY(8px)")
+                .style("fill", textFillColor);
         }
 
         /**
@@ -270,12 +258,12 @@ define(function(require){
             let tooltipX, tooltipY;
 
             // show tooltip to the right
-            if ((mouseX - tooltipWidth) < 0) {
+            if (mouseX - tooltipWidth < 0) {
                 // Tooltip on the right
                 tooltipX = tooltipWidth - 185;
             } else {
                 // Tooltip on the left
-                tooltipX = -205
+                tooltipX = -205;
             }
 
             if (mouseY) {
@@ -298,7 +286,7 @@ define(function(require){
             let valueText;
 
             if (data.missingValue) {
-                valueText = '-';
+                valueText = "-";
             } else {
                 valueText = getFormattedValue(value).toString();
             }
@@ -322,7 +310,7 @@ define(function(require){
          * @return void
          * @private
          */
-        function updateTopicContent(topic){
+        function updateTopicContent(topic) {
             let name = topic[nameLabel],
                 tooltipRight,
                 tooltipLeftText,
@@ -333,43 +321,54 @@ define(function(require){
             tooltipRightText = getValueText(topic);
 
             elementText = tooltipBody
-              .append('text')
-                .classed('tooltip-left-text', true)
-                .attr('dy', '1em')
-                .attr('x', ttTextX)
-                .attr('y', ttTextY)
-                .style('fill', tooltipTextColor)
+                .append("text")
+                .classed("tooltip-left-text", true)
+                .attr("dy", "1em")
+                .attr("x", ttTextX)
+                .attr("y", ttTextY)
+                .style("fill", tooltipTextColor)
                 .text(tooltipLeftText)
-                .call(textWrap, tooltipMaxTopicLength, initialTooltipTextXPosition);
+                .call(
+                    textWrap,
+                    tooltipMaxTopicLength,
+                    initialTooltipTextXPosition
+                );
 
             tooltipRight = tooltipBody
-              .append('text')
-                .classed('tooltip-right-text', true)
-                .attr('dy', '1em')
-                .attr('x', ttTextX)
-                .attr('y', ttTextY)
-                .style('fill', tooltipTextColor)
+                .append("text")
+                .classed("tooltip-right-text", true)
+                .attr("dy", "1em")
+                .attr("x", ttTextX)
+                .attr("y", ttTextY)
+                .style("fill", tooltipTextColor)
                 .text(tooltipRightText);
 
             // IE11 give us sometimes a height of 0 when hovering on top of the vertical marker
             // This hack fixes it for some cases, but it doesn't work in multiline (they won't wrap)
             // Let's remove this once we stop supporting IE11
-            textHeight = elementText.node().getBBox().height ? elementText.node().getBBox().height : textHeight;
+            textHeight = elementText.node().getBBox().height
+                ? elementText.node().getBBox().height
+                : textHeight;
 
             tooltipHeight += textHeight + tooltipTextLinePadding;
             // update the width if it exists because IE renders the elements
             // too slow and cant figure out the width?
-            tooltipRightWidth = tooltipRight.node().getBBox().width ? tooltipRight.node().getBBox().width : tooltipRightWidth;
-            tooltipRight.attr( 'x', tooltipWidth - tooltipRightWidth - 10 - tooltipWidth / 4 );
+            tooltipRightWidth = tooltipRight.node().getBBox().width
+                ? tooltipRight.node().getBBox().width
+                : tooltipRightWidth;
+            tooltipRight.attr(
+                "x",
+                tooltipWidth - tooltipRightWidth - 10 - tooltipWidth / 4
+            );
 
             tooltipBody
-                .append('circle')
-                .classed('tooltip-circle', true)
-                .attr('cx', 23 - tooltipWidth / 4)
-                .attr('cy', (ttTextY + circleYOffset))
-                .attr('r', 5)
-                .style('fill', colorMap[name])
-                .style('stroke-width', 1);
+                .append("circle")
+                .classed("tooltip-circle", true)
+                .attr("cx", 23 - tooltipWidth / 4)
+                .attr("cy", ttTextY + circleYOffset)
+                .attr("r", 5)
+                .style("fill", colorMap[name])
+                .style("stroke-width", 1);
 
             ttTextY += textHeight + 7;
         }
@@ -384,20 +383,23 @@ define(function(require){
          * @return void
          * @private
          */
-        function updatePositionAndSize(dataPoint, xPosition, yPosition){
-            let [tooltipX, tooltipY] = getTooltipPosition([xPosition, yPosition])
+        function updatePositionAndSize(dataPoint, xPosition, yPosition) {
+            let [tooltipX, tooltipY] = getTooltipPosition([
+                xPosition,
+                yPosition
+            ]);
 
             tooltip
-                .attr('width', tooltipWidth)
-                .attr('height', tooltipHeight + 10);
+                .attr("width", tooltipWidth)
+                .attr("height", tooltipHeight + 10);
 
-            tooltipTextContainer.transition()
+            tooltipTextContainer
+                .transition()
                 .duration(mouseChaseDuration)
                 .ease(ease)
-                .attr('transform', `translate(${tooltipX}, ${tooltipY})`);
+                .attr("transform", `translate(${tooltipX}, ${tooltipY})`);
 
-            tooltipDivider
-                .attr('x2', tooltipWidth - 60);
+            tooltipDivider.attr("x2", tooltipWidth - 60);
         }
 
         /**
@@ -430,19 +432,32 @@ define(function(require){
         function formatDate(date) {
             let settings = dateFormat || defaultAxisSettings;
             let format = null;
-            let localeOptions = {month:'short', day:'numeric'};
+            let localeOptions = { month: "short", day: "numeric" };
 
-            if (settings === axisTimeCombinations.DAY_MONTH || settings === axisTimeCombinations.MONTH_YEAR) {
+            if (
+                settings === axisTimeCombinations.DAY_MONTH ||
+                settings === axisTimeCombinations.MONTH_YEAR
+            ) {
                 format = monthDayYearFormat;
-                localeOptions.year = 'numeric';
-            } else if (settings === axisTimeCombinations.HOUR_DAY || settings === axisTimeCombinations.MINUTE_HOUR) {
+                localeOptions.year = "numeric";
+            } else if (
+                settings === axisTimeCombinations.HOUR_DAY ||
+                settings === axisTimeCombinations.MINUTE_HOUR
+            ) {
                 format = monthDayHourFormat;
-                localeOptions.hour = 'numeric';
-            } else if (settings === axisTimeCombinations.CUSTOM && typeof dateCustomFormat === 'string') {
+                localeOptions.hour = "numeric";
+            } else if (
+                settings === axisTimeCombinations.CUSTOM &&
+                typeof dateCustomFormat === "string"
+            ) {
                 format = d3TimeFormat.timeFormat(dateCustomFormat);
             }
 
-            if (locale && ((typeof Intl !== 'undefined') && (typeof Intl === 'object' && Intl.DateTimeFormat))) {
+            if (
+                locale &&
+                (typeof Intl !== "undefined" &&
+                    (typeof Intl === "object" && Intl.DateTimeFormat))
+            ) {
                 let f = Intl.DateTimeFormat(locale, localeOptions);
 
                 return f.format(date);
@@ -458,8 +473,10 @@ define(function(require){
          * @return {Object[]}           sorted topics object
          * @private
          */
-        function _sortByTopicsOrder(topics, order=topicsOrder) {
-            return order.map((orderName) => topics.filter(({name}) => name === orderName)[0]);
+        function _sortByTopicsOrder(topics, order = topicsOrder) {
+            return order.map(
+                orderName => topics.filter(({ name }) => name === orderName)[0]
+            );
         }
 
         /**
@@ -469,16 +486,14 @@ define(function(require){
          * @private
          */
         function _sortByAlpha(topics) {
-            return topics
-                .map(d => d)
-                .sort((a, b) => {
-                    if (a.name > b.name) return 1;
-                    if (a.name === b.name) return 0;
+            return topics.map(d => d).sort((a, b) => {
+                if (a.name > b.name) return 1;
+                if (a.name === b.name) return 0;
 
-                    return -1;
-                });
+                return -1;
+            });
 
-            let otherIndex = topics.map(({ name }) => name).indexOf('Other');
+            let otherIndex = topics.map(({ name }) => name).indexOf("Other");
 
             if (otherIndex >= 0) {
                 let other = topics.splice(otherIndex, 1);
@@ -499,53 +514,56 @@ define(function(require){
          */
         function textWrap(text, width, xpos = 0) {
             text.each(function() {
-                var words,
-                    word,
-                    line,
-                    lineNumber,
-                    lineHeight,
-                    y,
-                    dy,
-                    tspan;
+                var words, word, line, lineNumber, lineHeight, y, dy, tspan;
 
                 text = d3Selection.select(this);
 
-                words = text.text().split(/\s+/).reverse();
+                words = text
+                    .text()
+                    .split(/\s+/)
+                    .reverse();
                 line = [];
                 lineNumber = 0;
                 lineHeight = 1.2;
-                y = text.attr('y');
-                dy = parseFloat(text.attr('dy'));
+                y = text.attr("y");
+                dy = parseFloat(text.attr("dy"));
                 tspan = text
                     .text(null)
-                    .append('tspan')
-                    .attr('x', xpos)
-                    .attr('y', y)
-                    .attr('dy', dy + 'em');
+                    .append("tspan")
+                    .attr("x", xpos)
+                    .attr("y", y)
+                    .attr("dy", dy + "em");
 
                 while ((word = words.pop())) {
                     line.push(word);
-                    tspan.text(line.join(' '));
+                    tspan.text(line.join(" "));
 
                     // fixes for IE wrap text issue
-                    const textWidth = getTextWidth(line.join(' '), 16, 'Karla, sans-serif');
+                    const textWidth = getTextWidth(
+                        line.join(" "),
+                        16,
+                        "Karla, sans-serif"
+                    );
 
                     if (textWidth > width) {
                         line.pop();
-                        tspan.text(line.join(' '));
+                        tspan.text(line.join(" "));
 
                         if (lineNumber < entryLineLimit - 1) {
                             line = [word];
-                            tspan = text.append('tspan')
-                                .attr('x', xpos)
-                                .attr('y', y)
-                                .attr('dy', ++lineNumber * lineHeight + dy + 'em')
+                            tspan = text
+                                .append("tspan")
+                                .attr("x", xpos)
+                                .attr("y", y)
+                                .attr(
+                                    "dy",
+                                    ++lineNumber * lineHeight + dy + "em"
+                                )
                                 .text(word);
                         }
                     }
                 }
             });
-
         }
 
         /**
@@ -554,7 +572,7 @@ define(function(require){
          * @return void
          * @private
          */
-        function updateContent(dataPoint){
+        function updateContent(dataPoint) {
             var topics = dataPoint[topicLabel];
 
             // sort order by topicsOrder array if passed
@@ -568,6 +586,43 @@ define(function(require){
             updateTitle(dataPoint);
             resetSizeAndPositionPointers();
             topics.forEach(updateTopicContent);
+
+            createTooltipFooter(dataPoint);
+        }
+
+        function createTooltipFooter(dataPoint, topics) {
+            if (!tooltipFooter) {
+                return;
+            }
+
+            tooltipFooterContainer = tooltipBody
+                .append("g")
+                .classed("tooltip-footer", true);
+
+            let tooltipDrawingInfo = {
+                tooltipFooterContainer: tooltipFooterContainer,
+                ttTextX: ttTextX,
+                ttTextY: ttTextY,
+                textHeight: textHeight,
+                tooltipHeight: tooltipHeight,
+                tooltipWidth: tooltipWidth,
+                borderStrokeColor: borderStrokeColor,
+                tooltipTextColor: tooltipTextColor,
+                dataPoint: dataPoint,
+                topicLabel: topicLabel,
+                topics: topics,
+                topicsOrder: topicsOrder,
+                textWrap: textWrap,
+                initialTooltipTextXPosition: initialTooltipTextXPosition,
+                tooltipTextLinePadding: tooltipTextLinePadding
+            };
+
+            tooltipFooter(tooltipDrawingInfo);
+
+            ttTextX = tooltipDrawingInfo.ttTextX;
+            ttTextY = tooltipDrawingInfo.ttTextY;
+            tooltipHeight = tooltipDrawingInfo.tooltipHeight;
+            tooltipWidth = tooltipDrawingInfo.tooltipWidth;
         }
 
         /**
@@ -583,7 +638,6 @@ define(function(require){
             updateContent(dataPoint);
             updatePositionAndSize(dataPoint, xPosition, yPosition);
         }
-
 
         // API
 
@@ -602,7 +656,7 @@ define(function(require){
          */
         exports.dateFormat = function(_x) {
             if (!arguments.length) {
-              return dateFormat || defaultAxisSettings;
+                return dateFormat || defaultAxisSettings;
             }
             dateFormat = _x;
 
@@ -647,7 +701,7 @@ define(function(require){
          * @public
          */
         exports.hide = function() {
-            svg.style('visibility', 'hidden');
+            svg.style("visibility", "hidden");
 
             return this;
         };
@@ -660,7 +714,7 @@ define(function(require){
          */
         exports.locale = function(_x) {
             if (!arguments.length) {
-              return locale;
+                return locale;
             }
             locale = _x;
 
@@ -695,7 +749,7 @@ define(function(require){
             numberFormat = _x;
 
             return this;
-        }
+        };
 
         /**
          * Gets or Sets the formatter function for the value displayed on the tooltip.
@@ -712,7 +766,7 @@ define(function(require){
             valueFormatter = _x;
 
             return this;
-        }
+        };
 
         /**
          * Gets or Sets shouldShowDateInTitle
@@ -735,7 +789,7 @@ define(function(require){
          * @public
          */
         exports.show = function() {
-            svg.style('visibility', 'visible');
+            svg.style("visibility", "visible");
 
             return this;
         };
@@ -800,6 +854,15 @@ define(function(require){
             return this;
         };
 
+        exports.tooltipFooter = function(_x) {
+            if (!arguments.length) {
+                return tooltipFooter;
+            }
+            tooltipFooter = _x;
+
+            return this;
+        };
+
         /**
          * Updates the position and content of the tooltip
          * @param  {Object} dataPoint       Datapoint to represent
@@ -808,7 +871,12 @@ define(function(require){
          * @return {Module}                 Tooltip module to chain calls
          * @public
          */
-        exports.update = function(dataPoint, colorMapping, xPosition, yPosition = null) {
+        exports.update = function(
+            dataPoint,
+            colorMapping,
+            xPosition,
+            yPosition = null
+        ) {
             colorMap = colorMapping;
             updateTooltip(dataPoint, xPosition, yPosition);
 
